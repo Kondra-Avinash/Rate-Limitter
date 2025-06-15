@@ -12,8 +12,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RateLimittingFilet implements Filter {
 
 
-    private Map<String, AtomicInteger> numberofipaddress = new ConcurrentHashMap<>();
+    private Map<String, RequestInfo> numberofipaddress = new ConcurrentHashMap<>();
     private int MAX_NUMBEROF_REQUESTS = 5;
+    private long Time_Window = 60_000;
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -26,18 +27,24 @@ public class RateLimittingFilet implements Filter {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
         String ipAddress = request.getRemoteAddr();
+        long now = System.currentTimeMillis();
 
-        numberofipaddress.putIfAbsent(ipAddress, new AtomicInteger(0));
-        AtomicInteger atomicInteger = numberofipaddress.get(ipAddress);
+        numberofipaddress.putIfAbsent(ipAddress, new RequestInfo());
 
-        int requests = atomicInteger.incrementAndGet();
+        RequestInfo requestInfo = numberofipaddress.get(ipAddress);
 
-        if(requests > MAX_NUMBEROF_REQUESTS){
-            response.setStatus(response.SC_SERVICE_UNAVAILABLE);
-            response.getWriter().write("Too many Requests");
+        if(now - requestInfo.timestamp > Time_Window){
+            requestInfo.count.set(0);
+            requestInfo.timestamp = now;
+        }
+        int current = requestInfo.count.incrementAndGet();
 
+        if (current > MAX_NUMBEROF_REQUESTS) {
+            response.setStatus(response.SC_BAD_REQUEST);
+            response.getWriter().write("Too many requests");
             return;
         }
+
         filterChain.doFilter(request, response);
     }
 

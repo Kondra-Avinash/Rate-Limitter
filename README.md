@@ -58,4 +58,4 @@ Build the project and you can test it in PostMan:
 
 Make a get request to http://localhost:8080/api/hello
 
-send the request more then 5 times. You will see on 6th request you will be seeing Error message. This is not limited to any minutes. 
+send the request more then 5 times. You will see on 6th request you will be seeing Error message. This limitter is per minute. You can send 5 requests per minute. 
